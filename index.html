@@ -1,686 +1,570 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Viz Extension: KPI Dashboard by Sameera</title>
-    <!-- Tableau Extensions API Library -->
-    <script src="https://tableau.github.io/extensions-api/lib/tableau.extensions.1.latest.js"></script>
-    <!-- Google Fonts & Font Awesome for Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Chart.js CDN for mini sparkline / optional progress? not needed but we use pure CSS for budget bars -->
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Manager Performance</title>
+<script src="https://cdn.jsdelivr.net/gh/tableau/extensions-api/lib/tableau.extensions.1.latest.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  width:100%;height:100%;background:#f0f0ec;
+  font-family:'Inter',-apple-system,sans-serif;
+  overflow:hidden;-webkit-font-smoothing:antialiased;
+}
 
-        body {
-            background-color: #f0f0ec;   /* professional light earthy background */
-            font-family: 'Inter', sans-serif;
-            padding: 20px;
-            margin: 0;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+/* ══════════════════════════════
+   SPLASH
+══════════════════════════════ */
+#splash{
+  position:fixed;inset:0;background:#f0f0ec;z-index:999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  transition:opacity .5s ease;
+}
+.sp-logo{
+  width:56px;height:56px;border-radius:16px;
+  background:#fff;border:0.5px solid #e2e8f0;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 14px rgba(0,0,0,0.08);margin-bottom:6px;
+}
+.sp-name{font-size:14px;font-weight:700;color:#0f172a;letter-spacing:-.01em;}
+.sp-by{font-size:10px;font-weight:500;color:#94a3b8;letter-spacing:.05em;}
+.sp-track{width:90px;height:2px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin-top:14px;}
+.sp-fill{height:100%;width:0;background:linear-gradient(90deg,#16a34a,#0d9488);border-radius:99px;animation:spload 1.8s ease forwards;}
+@keyframes spload{to{width:100%}}
 
-        /* Main Dashboard Container */
-        .dashboard-container {
-            max-width: 1400px;
-            width: 100%;
-            margin: 0 auto;
-            background: transparent;
-            border-radius: 28px;
-        }
+/* ══════════════════════════════
+   MAIN
+══════════════════════════════ */
+#main{
+  display:none;width:100%;height:100%;
+  position:relative;
+  align-items:center;justify-content:center;
+  padding:10px 8px;
+}
 
-        /* Loading overlay */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #f0f0ec;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            font-size: 1.8rem;
-            font-weight: 600;
-            color: #2c3e2f;
-            font-family: 'Inter', monospace;
-            letter-spacing: 1px;
-            backdrop-filter: blur(2px);
-            transition: opacity 0.5s ease;
-        }
-        .loading-overlay span {
-            background: white;
-            padding: 16px 32px;
-            border-radius: 60px;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
-            border: 1px solid #e2e2da;
-        }
+/* grid: [card][card][photo][card][card] */
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr auto 1fr 1fr;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  position:relative;z-index:2;
+}
 
-        /* Photo + Manager Row (photo on top left, manager name) */
-        .manager-photo-section {
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            margin-bottom: 28px;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-        .photo-card {
-            background: white;
-            border-radius: 24px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.02), 0 2px 6px rgba(0,0,0,0.05);
-            padding: 12px;
-            border: 1px solid #e6e6df;
-            transition: all 0.2s;
-            width: fit-content;
-            min-width: 180px;
-        }
-        .manager-img {
-            width: 140px;
-            height: 140px;
-            object-fit: cover;
-            border-radius: 20px;
-            display: block;
-            background: #fafaf5;
-            border: 2px solid #ffffff;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-        .manager-details {
-            margin-left: 20px;
-        }
-        .manager-name {
-            font-size: 1.7rem;
-            font-weight: 700;
-            color: #2c3e2f;
-            letter-spacing: -0.3px;
-            background: rgba(255,255,245,0.7);
-            backdrop-filter: blur(4px);
-            padding: 8px 18px;
-            border-radius: 40px;
-            display: inline-block;
-        }
-        .caption-badge {
-            font-size: 0.85rem;
-            color: #5b6e5c;
-            margin-top: 6px;
-            font-weight: 500;
-        }
+/* SVG connector overlay */
+#svg-layer{
+  position:absolute;inset:0;
+  pointer-events:none;overflow:visible;z-index:1;
+}
 
-        /* KPI Cards Grid */
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 22px;
-            margin-bottom: 32px;
-        }
+/* ── PHOTO COLUMN ── */
+.photo-col{
+  display:flex;flex-direction:column;
+  align-items:center;gap:6px;
+  position:relative;flex-shrink:0;
+}
+/* conic ring — 4 quadrants, green=achieved red=missed */
+.av-outer{
+  border-radius:50%;padding:3.5px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 24px rgba(0,0,0,0.14);
+  transition:background .4s ease;
+}
+.av-inner{
+  border-radius:50%;
+  border:3px solid #fff;
+  overflow:hidden;background:#e8f5e9;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+#av-img{width:100%;height:100%;object-fit:cover;display:block;}
+#av-ini{
+  width:100%;height:100%;
+  display:none;align-items:center;justify-content:center;
+  font-weight:700;color:#15803d;
+  position:absolute;inset:0;
+}
+#mgr-name{
+  font-size:12px;font-weight:700;color:#0f172a;
+  text-align:center;white-space:nowrap;letter-spacing:-.01em;
+}
 
-        /* each card */
-        .kpi-card {
-            background: white;
-            border-radius: 28px;
-            padding: 20px 18px;
-            box-shadow: 0 12px 28px -8px rgba(0,0,0,0.05);
-            transition: transform 0.2s ease, box-shadow 0.2s;
-            border: 1px solid #eaeae2;
-            cursor: pointer;
-            position: relative;
-            backdrop-filter: blur(0px);
-        }
-        .kpi-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 30px -12px rgba(0,0,0,0.1);
-            border-color: #cdd9c6;
-        }
-        /* active selection (parameter sync) */
-        .kpi-card.active-card {
-            border: 2px solid #2c6e2f;
-            background: #fefef8;
-            box-shadow: 0 12px 28px rgba(44,110,47,0.12);
-        }
-        .card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 18px;
-        }
-        .card-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #3a4b3a;
-            letter-spacing: -0.2px;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 0.5px;
-        }
-        .card-icon {
-            font-size: 2.2rem;
-            color: #3b6e3e;
-            opacity: 0.7;
-        }
-        .kpi-value {
-            font-size: 2.45rem;
-            font-weight: 700;
-            color: #1f2a1b;
-            line-height: 1.2;
-            margin-bottom: 12px;
-            letter-spacing: -1px;
-        }
-        .kpi-sub {
-            font-size: 0.75rem;
-            color: #7a8e7a;
-            margin-top: 6px;
-            border-top: 1px solid #efefe6;
-            padding-top: 8px;
-        }
+/* ── GLASS KPI CARD ── */
+.gc{
+  background:rgba(255,255,255,0.58);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:0.5px solid rgba(255,255,255,0.75);
+  border-radius:14px;padding:11px 12px 9px;
+  box-shadow:0 2px 14px rgba(15,23,42,0.07),inset 0 1px 0 rgba(255,255,255,0.9);
+  position:relative;overflow:hidden;
+  cursor:pointer;transition:transform .15s,box-shadow .15s;
+  min-width:0;
+}
+.gc:hover{transform:translateY(-2px);box-shadow:0 6px 28px rgba(15,23,42,0.12);}
+/* top stripe */
+.gc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0;}
+.gc.ok::before{background:#16a34a;}
+.gc.miss::before{background:#dc2626;}
+/* sheen */
+.gc::after{content:'';position:absolute;inset:0;background:linear-gradient(140deg,rgba(255,255,255,0.2) 0%,transparent 55%);border-radius:14px;pointer-events:none;}
 
-        /* Budget achievement bar + indicators */
-        .budget-section {
-            margin: 16px 0 8px;
-        }
-        .budget-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.7rem;
-            font-weight: 500;
-            margin-bottom: 6px;
-            color: #4d5f4a;
-        }
-        .progress-bar-bg {
-            background: #e7e7df;
-            border-radius: 100px;
-            height: 8px;
-            overflow: hidden;
-            width: 100%;
-        }
-        .progress-fill {
-            height: 100%;
-            width: 0%;
-            border-radius: 100px;
-            transition: width 0.5s ease;
-        }
-        .budget-green {
-            background: #2b9348;
-        }
-        .budget-red {
-            background: #e85d04;
-        }
-        .indicator-text {
-            font-size: 0.7rem;
-            font-weight: 600;
-            margin-top: 8px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .green-dot {
-            color: #2b9348;
-        }
-        .red-dot {
-            color: #e85d04;
-        }
-
-        /* connection lines: we use pseudo or border with gradient? Requirement: lines connect kpi cards and photo.
-           We'll add a subtle connector via SVG overlay? but better: use decorative dotted lines on container
-           with absolute positioned elements for modern look (CSS-only). To maintain professional appearance, 
-           we will draw a connecting line container behind cards and photo that visually links photo to first card? 
-           Based on typical UI: photo and cards have a flow. We'll add a sleek continuous line (dashed) across 
-           using ::before and ::after on dashboard container. */
-        .connector-decoration {
-            position: relative;
-        }
-        .connector-decoration::before {
-            content: '';
-            position: absolute;
-            top: 160px;
-            left: 80px;
-            width: 240px;
-            height: 2px;
-            background: repeating-linear-gradient(90deg, #b5c9b0, #b5c9b0 6px, transparent 6px, transparent 12px);
-            z-index: 1;
-            pointer-events: none;
-            opacity: 0.5;
-        }
-        /* mobile adjust hide lines */
-        @media (max-width: 800px) {
-            .connector-decoration::before { display: none; }
-            .kpi-grid { gap: 14px; }
-            .kpi-value { font-size: 1.8rem; }
-        }
-
-        /* param selector dropdown (selkpi) */
-        .param-control {
-            background: white;
-            border-radius: 60px;
-            padding: 6px 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            width: fit-content;
-            border: 1px solid #e1e1d6;
-            margin-bottom: 28px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        }
-        .param-label {
-            font-weight: 500;
-            font-size: 0.8rem;
-            color: #4f6b4a;
-        }
-        select {
-            background: #fafaf5;
-            border: 1px solid #d8e0d2;
-            border-radius: 40px;
-            padding: 8px 20px;
-            font-family: 'Inter', monospace;
-            font-weight: 500;
-            font-size: 0.85rem;
-            color: #1e2a1c;
-            cursor: pointer;
-            outline: none;
-        }
-        .dashboard-footer {
-            font-size: 0.7rem;
-            text-align: right;
-            color: #a0b09c;
-            margin-top: 20px;
-            border-top: 1px solid #e1e6da;
-            padding-top: 14px;
-        }
-        .error-message {
-            color: #b33;
-            background: #fff3f0;
-            padding: 12px;
-            border-radius: 20px;
-            text-align: center;
-        }
-    </style>
+.gc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
+.gc-icon{width:27px;height:27px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.gc.ok .gc-icon{background:#dcfce7;}
+.gc.miss .gc-icon{background:#fee2e2;}
+.gc-lbl{font-size:7.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;}
+.gc-val{font-size:17px;font-weight:700;color:#0f172a;letter-spacing:-.02em;line-height:1;margin-bottom:3px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gc-delta{font-size:9px;font-weight:700;margin-bottom:1px;display:flex;align-items:center;gap:2px;}
+.gc-delta.up{color:#15803d;}.gc-delta.dn{color:#b91c1c;}.gc-delta.neu{color:#94a3b8;}
+.gc-vs{font-size:7.5px;color:#94a3b8;margin-bottom:7px;}
+.gc-bar{height:3px;background:rgba(0,0,0,0.07);border-radius:99px;overflow:hidden;margin-bottom:3px;}
+.gc-fill{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.22,.68,0,1);}
+.gc.ok .gc-fill{background:#16a34a;}
+.gc.miss .gc-fill{background:#dc2626;}
+.gc-att{font-size:7.5px;font-weight:600;}
+.gc.ok .gc-att{color:#15803d;}.gc.miss .gc-att{color:#b91c1c;}
+</style>
 </head>
 <body>
 
-<div class="loading-overlay" id="loadingOverlay">
-    <span>✨ Viz Extension By Sameera ✨</span>
+<!-- SPLASH -->
+<div id="splash">
+  <div class="sp-logo">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <rect x="2" y="2" width="24" height="24" rx="7" stroke="#16a34a" stroke-width="1.8"/>
+      <polyline points="5,19 9,13 13,16 20,8" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="20" cy="8" r="2" fill="#16a34a"/>
+    </svg>
+  </div>
+  <div class="sp-name">Manager Performance</div>
+  <div class="sp-by">Viz Extension · By Sameera</div>
+  <div class="sp-track"><div class="sp-fill"></div></div>
 </div>
 
-<div class="dashboard-container connector-decoration" id="dashboardMain" style="display: none;">
-    
-    <!-- Parameter selection row: selkpi (dynamic categories) -->
-    <div class="param-control">
-        <span class="param-label"><i class="fas fa-chart-line"></i> Select KPI Category:</span>
-        <select id="selkpiSelect">
-            <option value="first card">First Card (Profit)</option>
-            <option value="second card">Second Card (Deposits)</option>
-            <option value="third card">Third Card (Advances)</option>
-            <option value="fourth card">Fourth Card (NPA %)</option>
-        </select>
+<!-- MAIN -->
+<div id="main">
+  <svg id="svg-layer" aria-hidden="true"></svg>
+
+  <div class="grid" id="grid">
+
+    <!-- Card 0: left side card 1 (Profit) -->
+    <div class="gc ok" id="gc0" data-idx="0">
+      <div class="gc-top">
+        <div class="gc-icon">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="1,11 4,6.5 7,8.5 13,2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="gc-lbl" id="gc0-lbl">Profit</span>
+      </div>
+      <div class="gc-val" id="gc0-val">—</div>
+      <div class="gc-delta neu" id="gc0-delta">—</div>
+      <div class="gc-vs" id="gc0-vs"></div>
+      <div class="gc-bar"><div class="gc-fill" id="gc0-bar" style="width:0%"></div></div>
+      <div class="gc-att" id="gc0-att"></div>
     </div>
 
-    <!-- Manager Photo Section: upper side of cards as in image -->
-    <div class="manager-photo-section">
-        <div class="photo-card">
-            <img id="managerPhotoImg" class="manager-img" src="https://randomuser.me/api/portraits/men/32.jpg" alt="Manager Photo" onerror="this.src='https://ui-avatars.com/api/?background=2c6e2f&color=fff&name=JM'">
-            <div class="caption-badge"><i class="fas fa-camera"></i> Leadership</div>
+    <!-- Card 1: left side card 2 (Advances) -->
+    <div class="gc ok" id="gc1" data-idx="1">
+      <div class="gc-top">
+        <div class="gc-icon">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 7h5M9.5 7L7.5 5M9.5 7L7.5 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
-        <div class="manager-details">
-            <div class="manager-name" id="managerNameDisplay">James Morrison</div>
-            <div class="caption-badge"><i class="fas fa-chart-simple"></i> performance dashboard</div>
-        </div>
+        <span class="gc-lbl" id="gc1-lbl">Advances</span>
+      </div>
+      <div class="gc-val" id="gc1-val">—</div>
+      <div class="gc-delta neu" id="gc1-delta">—</div>
+      <div class="gc-vs" id="gc1-vs"></div>
+      <div class="gc-bar"><div class="gc-fill" id="gc1-bar" style="width:0%"></div></div>
+      <div class="gc-att" id="gc1-att"></div>
     </div>
 
-    <!-- 4 KPI Cards -->
-    <div class="kpi-grid" id="kpiGrid">
-        <!-- Card 1: Profit -->
-        <div class="kpi-card" data-card-idx="0" data-category="first card">
-            <div class="card-header">
-                <span class="card-title"><i class="fas fa-chart-line"></i> PROFIT</span>
-                <span class="card-icon"><i class="fas fa-coins"></i></span>
-            </div>
-            <div class="kpi-value" id="profitVal">--</div>
-            <div class="budget-section">
-                <div class="budget-label"><span>Budget achievement</span><span id="profitPercentLabel">0%</span></div>
-                <div class="progress-bar-bg"><div class="progress-fill" id="profitFill"></div></div>
-                <div class="indicator-text" id="profitIndicator"></div>
-            </div>
-            <div class="kpi-sub">vs target · actual / budget</div>
+    <!-- PHOTO CENTRE -->
+    <div class="photo-col" id="photo-col">
+      <div class="av-outer" id="av-outer" style="background:conic-gradient(#16a34a 0% 25%,#16a34a 25% 50%,#16a34a 50% 75%,#16a34a 75% 100%)">
+        <div class="av-inner" id="av-inner">
+          <img id="av-img" src="" alt="Manager photo"/>
+          <div id="av-ini"></div>
         </div>
-        <!-- Card 2: Deposits -->
-        <div class="kpi-card" data-card-idx="1" data-category="second card">
-            <div class="card-header">
-                <span class="card-title"><i class="fas fa-piggy-bank"></i> DEPOSITS</span>
-                <span class="card-icon"><i class="fas fa-building-columns"></i></span>
-            </div>
-            <div class="kpi-value" id="depositVal">--</div>
-            <div class="budget-section">
-                <div class="budget-label"><span>Budget achievement</span><span id="depositPercentLabel">0%</span></div>
-                <div class="progress-bar-bg"><div class="progress-fill" id="depositFill"></div></div>
-                <div class="indicator-text" id="depositIndicator"></div>
-            </div>
-            <div class="kpi-sub">deposit growth</div>
-        </div>
-        <!-- Card 3: Advances -->
-        <div class="kpi-card" data-card-idx="2" data-category="third card">
-            <div class="card-header">
-                <span class="card-title"><i class="fas fa-hand-holding-usd"></i> ADVANCES</span>
-                <span class="card-icon"><i class="fas fa-arrow-trend-up"></i></span>
-            </div>
-            <div class="kpi-value" id="advancesVal">--</div>
-            <div class="budget-section">
-                <div class="budget-label"><span>Budget achievement</span><span id="advancesPercentLabel">0%</span></div>
-                <div class="progress-bar-bg"><div class="progress-fill" id="advancesFill"></div></div>
-                <div class="indicator-text" id="advancesIndicator"></div>
-            </div>
-            <div class="kpi-sub">loan book advances</div>
-        </div>
-        <!-- Card 4: NPA % -->
-        <div class="kpi-card" data-card-idx="3" data-category="fourth card">
-            <div class="card-header">
-                <span class="card-title"><i class="fas fa-percent"></i> NPA %</span>
-                <span class="card-icon"><i class="fas fa-chart-simple"></i></span>
-            </div>
-            <div class="kpi-value" id="npaVal">--</div>
-            <div class="budget-section">
-                <div class="budget-label"><span>Budget achievement</span><span id="npaPercentLabel">0%</span></div>
-                <div class="progress-bar-bg"><div class="progress-fill" id="npaFill"></div></div>
-                <div class="indicator-text" id="npaIndicator"></div>
-            </div>
-            <div class="kpi-sub">NPA ratio target <= threshold</div>
-        </div>
+      </div>
+      <div id="mgr-name">—</div>
     </div>
-    <div class="dashboard-footer">
-        <i class="fas fa-chart-pie"></i> Real-time KPI monitoring • budget colors: green=achieved, red=below
+
+    <!-- Card 2: right side card 1 (Deposits) -->
+    <div class="gc ok" id="gc2" data-idx="2">
+      <div class="gc-top">
+        <div class="gc-icon">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="5" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 5V3.5a2 2 0 0 1 4 0V5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </div>
+        <span class="gc-lbl" id="gc2-lbl">Deposits</span>
+      </div>
+      <div class="gc-val" id="gc2-val">—</div>
+      <div class="gc-delta neu" id="gc2-delta">—</div>
+      <div class="gc-vs" id="gc2-vs"></div>
+      <div class="gc-bar"><div class="gc-fill" id="gc2-bar" style="width:0%"></div></div>
+      <div class="gc-att" id="gc2-att"></div>
     </div>
+
+    <!-- Card 3: right side card 2 (NPA %) -->
+    <div class="gc ok" id="gc3" data-idx="3">
+      <div class="gc-top">
+        <div class="gc-icon">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.4"/><text x="7" y="10.5" text-anchor="middle" font-size="7.5" font-weight="700" fill="currentColor" font-family="Inter,sans-serif">%</text></svg>
+        </div>
+        <span class="gc-lbl" id="gc3-lbl">NPA %</span>
+      </div>
+      <div class="gc-val" id="gc3-val">—</div>
+      <div class="gc-delta neu" id="gc3-delta">—</div>
+      <div class="gc-vs" id="gc3-vs"></div>
+      <div class="gc-bar"><div class="gc-fill" id="gc3-bar" style="width:0%"></div></div>
+      <div class="gc-att" id="gc3-att"></div>
+    </div>
+
+  </div>
 </div>
 
 <script>
-    (async function() {
-        // hide loading after preload
-        const loadingDiv = document.getElementById('loadingOverlay');
-        const dashboard = document.getElementById('dashboardMain');
-        
-        // Global data storage
-        let currentSummaryData = null;
-        let worksheet = null;
-        let selKpiParam = null;
-        let activeCardCategory = 'first card'; // default
+'use strict';
+(function(){
 
-        // Helper: format number into billions / millions without currency symbol
-        function formatAmount(value) {
-            if (value === null || isNaN(value)) return '—';
-            const absVal = Math.abs(value);
-            if (absVal >= 1e9) return (value / 1e9).toFixed(1) + 'B';
-            if (absVal >= 1e6) return (value / 1e6).toFixed(1) + 'M';
-            if (absVal >= 1e3) return (value / 1e3).toFixed(1) + 'K';
-            return value.toFixed(2);
-        }
+var $=function(id){return document.getElementById(id);};
+var appEl=document.getElementById('main');
 
-        function formatPercent(value) {
-            if (value === null || isNaN(value)) return '—';
-            return value.toFixed(2) + '%';
-        }
+/* ── number format — no currency, smart units ── */
+function fmtN(n){
+  if(n===null||isNaN(n)) return '—';
+  var abs=Math.abs(n),s=n<0?'-':'';
+  if(abs>=1e9) return s+(abs/1e9).toFixed(2)+' B';
+  if(abs>=1e6) return s+(abs/1e6).toFixed(2)+' M';
+  if(abs>=1e3) return s+(abs/1e3).toFixed(2)+' K';
+  if(abs>=1)   return s+abs.toFixed(2);
+  return s+(abs*100).toFixed(2)+'%'; /* sub-1 treated as percentage */
+}
 
-        // Main rendering engine: processes data from Tableau worksheet.
-        // Expected fields: we need to map categories based on the custom encoding "drop".
-        // According to requirements: one field will contain categories "first card, second card, third card, fourth card"
-        // that should be captured to four cards. So the user provides a dimension/measure that carries category names and values.
-        // Additionally currency should not display. Amount display in proper units. Also we compute budget achievements.
-        // We will parse data rows: each row should have Category (string) and Value (measure), plus BudgetTarget (measure optional, for achievement)
-        // For demo robust: We'll use summary data reader; we expect fields: 'KPI Category', 'KPI Amount', 'Budget Target'
-        // If not present we generate sample but from Tableau data we adapt mapping.
-        async function renderFromData() {
-            if (!worksheet) return;
-            try {
-                // get visual spec to understand encodings (we have custom "drop" encoding)
-                const visualSpec = await worksheet.getVisualSpecificationAsync();
-                const marksCard = visualSpec.marksSpecifications[visualSpec.activeMarksSpecificationIndex];
-                const encodings = marksCard.encodings;
-                let categoryField = null;
-                let valueField = null;
-                let budgetField = null;
-                for (let enc of encodings) {
-                    if (enc.id === 'drop') {
-                        // The field placed on the drop zone
-                        if (enc.field) {
-                            categoryField = enc.field.name;
-                        }
-                    }
-                    // also other encodings? but we stick to drop for main category field
-                    // For value measure we detect another potential numeric measure but simpler: we will parse all numeric columns.
-                }
-                // get summary data
-                const dataReader = await worksheet.getSummaryDataReaderAsync();
-                const dataTable = await dataReader.readAllAsync();
-                const columns = dataTable.columns;
-                const rows = [];
-                for (let i = 0; i < dataTable.data.length; i++) {
-                    let rowObj = {};
-                    for (let j = 0; j < columns.length; j++) {
-                        rowObj[columns[j].fieldName] = dataTable.data[i][j].value;
-                    }
-                    rows.push(rowObj);
-                }
-                // Intelligent mapping: look for category column (contains first card, second..) and numeric column.
-                let categoryCol = null;
-                let valueCol = null;
-                let budgetCol = null;
-                // find column that contains expected categories or string
-                for (let col of columns) {
-                    const colName = col.fieldName.toLowerCase();
-                    if (colName.includes('category') || colName.includes('kpi') || colName.includes('card')) {
-                        categoryCol = col.fieldName;
-                    }
-                    if ((col.dataType === 'float' || col.dataType === 'integer') && !budgetCol && colName.includes('budget')) {
-                        budgetCol = col.fieldName;
-                    }
-                    if ((col.dataType === 'float' || col.dataType === 'integer') && !valueCol && colName !== budgetCol) {
-                        valueCol = col.fieldName;
-                    }
-                }
-                // Fallback: if no category column, we assign static based on rows or default data
-                const categoryMap = {
-                    'first card': { profit: null, budget: null, idx: 0 },
-                    'second card': { deposits: null, budget: null, idx: 1 },
-                    'third card': { advances: null, budget: null, idx: 2 },
-                    'fourth card': { npa: null, budget: null, idx: 3 }
-                };
-                
-                if (categoryCol && valueCol) {
-                    for (let row of rows) {
-                        let catRaw = String(row[categoryCol]).trim().toLowerCase();
-                        let val = parseFloat(row[valueCol]);
-                        let budg = budgetCol ? parseFloat(row[budgetCol]) : null;
-                        if (catRaw === 'first card') { categoryMap['first card'].profit = isNaN(val) ? 0 : val; categoryMap['first card'].budget = budg; }
-                        if (catRaw === 'second card') { categoryMap['second card'].deposits = isNaN(val) ? 0 : val; categoryMap['second card'].budget = budg; }
-                        if (catRaw === 'third card') { categoryMap['third card'].advances = isNaN(val) ? 0 : val; categoryMap['third card'].budget = budg; }
-                        if (catRaw === 'fourth card') { categoryMap['fourth card'].npa = isNaN(val) ? 0 : val; categoryMap['fourth card'].budget = budg; }
-                    }
-                } else {
-                    // fallback demo data if no mapping: but will reflect from superstore? Better to generate meaningful instruction
-                    // use pre-defined from table anyway we show sample mock? No, we use data if available or synthetic message
-                    // In production, the user will provide correct field. But we set zero to show guidance.
-                    if (rows.length === 0) {
-                        // set placeholder to not break UI
-                        categoryMap['first card'].profit = 12500000;
-                        categoryMap['first card'].budget = 10000000;
-                        categoryMap['second card'].deposits = 342000000;
-                        categoryMap['second card'].budget = 300000000;
-                        categoryMap['third card'].advances = 287000000;
-                        categoryMap['third card'].budget = 310000000;
-                        categoryMap['fourth card'].npa = 3.2;
-                        categoryMap['fourth card'].budget = 4.0;
-                    } else {
-                        // dummy mapping from first numeric column
-                        let firstNumeric = null;
-                        for (let col of columns) {
-                            if (col.dataType === 'float' || col.dataType === 'integer') { firstNumeric = col.fieldName; break; }
-                        }
-                        if (firstNumeric && rows[0]) {
-                            let baseVal = parseFloat(rows[0][firstNumeric]) || 5000000;
-                            categoryMap['first card'].profit = baseVal * 1.2;
-                            categoryMap['second card'].deposits = baseVal * 8.4;
-                            categoryMap['third card'].advances = baseVal * 6.7;
-                            categoryMap['fourth card'].npa = (baseVal % 5) + 1.5;
-                            categoryMap['first card'].budget = baseVal;
-                            categoryMap['second card'].budget = baseVal * 7;
-                            categoryMap['third card'].budget = baseVal * 7.5;
-                            categoryMap['fourth card'].budget = 3.0;
-                        }
-                    }
-                }
-                
-                // Update UI cards
-                updateCardUI(categoryMap);
-                await syncParameterSelection();
-            } catch (err) {
-                console.error(err);
-                document.querySelector('.kpi-grid').innerHTML = `<div class="error-message">Error loading data: ${err.message}. Ensure fields mapped to Drop encoding.</div>`;
-            }
-        }
-        
-        function updateCardUI(dataMap) {
-            // profit
-            const profitVal = dataMap['first card'].profit;
-            const profitBudget = dataMap['first card'].budget;
-            document.getElementById('profitVal').innerText = formatAmount(profitVal);
-            updateBudgetUI(profitVal, profitBudget, 'profit', false);
-            // deposits
-            const depVal = dataMap['second card'].deposits;
-            const depBudget = dataMap['second card'].budget;
-            document.getElementById('depositVal').innerText = formatAmount(depVal);
-            updateBudgetUI(depVal, depBudget, 'deposit', false);
-            // advances
-            const advVal = dataMap['third card'].advances;
-            const advBudget = dataMap['third card'].budget;
-            document.getElementById('advancesVal').innerText = formatAmount(advVal);
-            updateBudgetUI(advVal, advBudget, 'advances', false);
-            // npa %
-            const npaVal = dataMap['fourth card'].npa;
-            const npaBudget = dataMap['fourth card'].budget;
-            document.getElementById('npaVal').innerText = formatPercent(npaVal);
-            // For NPA % budget achievement: lower is better => achievement if npa <= budget target
-            let npaAchievePercent = 0;
-            let npaColorClass = 'budget-red';
-            let npaStatus = 'Below Target';
-            if (npaBudget && npaBudget > 0) {
-                if (npaVal <= npaBudget) {
-                    npaAchievePercent = 100;
-                    npaColorClass = 'budget-green';
-                    npaStatus = '✓ Achieved (below target)';
-                } else {
-                    let ratio = Math.max(0, (npaBudget / npaVal) * 100);
-                    npaAchievePercent = Math.min(100, ratio);
-                    npaColorClass = 'budget-red';
-                    npaStatus = `⚠ ${(npaVal - npaBudget).toFixed(2)}% above budget`;
-                }
-            } else {
-                npaAchievePercent = npaVal && npaBudget ? 0 : 50;
-            }
-            document.getElementById('npaPercentLabel').innerText = npaAchievePercent.toFixed(0) + '%';
-            document.getElementById('npaFill').style.width = npaAchievePercent + '%';
-            document.getElementById('npaFill').className = `progress-fill ${npaColorClass}`;
-            document.getElementById('npaIndicator').innerHTML = `<i class="fas ${npaColorClass === 'budget-green' ? 'fa-check-circle green-dot' : 'fa-exclamation-triangle red-dot'}"></i> ${npaStatus}`;
-        }
-        
-        function updateBudgetUI(actual, budget, prefix, isInverse = false) {
-            let percent = 0;
-            let colorClass = 'budget-red';
-            let statusText = '';
-            if (budget && budget > 0 && actual !== undefined) {
-                percent = (actual / budget) * 100;
-                percent = Math.min(100, Math.max(0, percent));
-                if (actual >= budget) {
-                    colorClass = 'budget-green';
-                    statusText = `✓ Achieved (${percent.toFixed(0)}% of target)`;
-                } else {
-                    colorClass = 'budget-red';
-                    statusText = `⚠ Under budget by ${(budget - actual).toFixed(1)} (${percent.toFixed(0)}%)`;
-                }
-            } else {
-                percent = 0;
-                statusText = 'No budget data';
-            }
-            document.getElementById(`${prefix}PercentLabel`).innerText = percent.toFixed(0) + '%';
-            const fillEl = document.getElementById(`${prefix}Fill`);
-            fillEl.style.width = percent + '%';
-            fillEl.className = `progress-fill ${colorClass}`;
-            const indicatorDiv = document.getElementById(`${prefix}Indicator`);
-            indicatorDiv.innerHTML = `<i class="fas ${colorClass === 'budget-green' ? 'fa-leaf green-dot' : 'fa-chart-line red-dot'}"></i> ${statusText}`;
-        }
-        
-        // parameter selection: update cards active highlight (selkpi)
-        async function syncParameterSelection() {
-            if (!worksheet) return;
-            const cards = document.querySelectorAll('.kpi-card');
-            cards.forEach(card => card.classList.remove('active-card'));
-            let activeCat = activeCardCategory;
-            const selectedIndex = ['first card', 'second card', 'third card', 'fourth card'].indexOf(activeCat);
-            if (selectedIndex !== -1 && cards[selectedIndex]) cards[selectedIndex].classList.add('active-card');
-            // if parameter exists set it
-            if (selKpiParam) {
-                try {
-                    await selKpiParam.setValueAsync(activeCat);
-                } catch(e) { console.warn(e); }
-            }
-        }
-        
-        function initParameterAndEvents() {
-            const selectEl = document.getElementById('selkpiSelect');
-            selectEl.addEventListener('change', (e) => {
-                activeCardCategory = e.target.value;
-                syncParameterSelection();
-            });
-        }
-        
-        async function initExtension() {
-            try {
-                await tableau.extensions.initializeAsync();
-                worksheet = tableau.extensions.worksheetContent.worksheet;
-                console.log('worksheet initialized:', worksheet.name);
-                // create or get parameter "selkpi"
-                const allParams = await tableau.extensions.dashboardContent.dashboard.parameters;
-                let paramFound = allParams.find(p => p.name === 'selkpi');
-                if (!paramFound) {
-                    // try to create programmatically? but best to assume user created parameter, we just listen.
-                    console.warn('Parameter "selkpi" not found, extension will use local selection.');
-                } else {
-                    selKpiParam = paramFound;
-                    const currVal = await selKpiParam.getValueAsync();
-                    if (currVal && ['first card','second card','third card','fourth card'].includes(currVal)) activeCardCategory = currVal;
-                    document.getElementById('selkpiSelect').value = activeCardCategory;
-                    selKpiParam.addEventListener(tableau.ParameterEventType.ValueChanged, async (event) => {
-                        const newVal = await selKpiParam.getValueAsync();
-                        if (newVal && newVal !== activeCardCategory) {
-                            activeCardCategory = newVal;
-                            document.getElementById('selkpiSelect').value = activeCardCategory;
-                            syncParameterSelection();
-                        }
-                    });
-                }
-                initParameterAndEvents();
-                document.getElementById('selkpiSelect').value = activeCardCategory;
-                // load data and add event listener
-                await renderFromData();
-                worksheet.addEventListener(tableau.TableauEventType.SummaryDataChanged, async () => {
-                    await renderFromData();
-                });
-                // hide loading
-                loadingDiv.style.opacity = '0';
-                setTimeout(() => { loadingDiv.style.display = 'none'; dashboard.style.display = 'block'; }, 300);
-                dashboard.style.display = 'block';
-            } catch (err) {
-                console.error(err);
-                loadingDiv.innerHTML = `<span>⚠️ Initialization Error: ${err.message}. Ensure .trex and safe list.</span>`;
-            }
-        }
-        
-        initExtension();
-    })();
+/* ── category → card index mapping ── */
+var CMAP={
+  'first card':0,'1st':0,'card1':0,'card 1':0,'profit':0,
+  'second card':1,'2nd':1,'card2':1,'card 2':1,'advances':1,'advance':1,
+  'third card':2,'3rd':2,'card3':2,'card 3':2,'deposits':2,'deposit':2,
+  'fourth card':3,'4th':3,'card4':3,'card 4':3,'npa':3,'npa %':3,'npa%':3
+};
+var LABELS=['Profit','Advances','Deposits','NPA %'];
+var INVERT=[false,false,false,true]; /* NPA: lower is better */
+
+/* ── update conic gradient ring based on achievement array ── */
+function updateRing(achieved){
+  /* 4 quadrants: top-right, bottom-right, bottom-left, top-left
+     mapped to card positions: c0=left1, c1=left2, c2=right1, c3=right2
+     ring quadrant order (conic from top): c0(left1), c1(left2), c2(right1), c3(right2) */
+  var stops=achieved.map(function(a){return a?'#16a34a':'#dc2626';});
+  var conic='conic-gradient('+
+    stops[0]+' 0% 25%,'+
+    stops[1]+' 25% 50%,'+
+    stops[2]+' 50% 75%,'+
+    stops[3]+' 75% 100%)';
+  $('av-outer').style.background=conic;
+}
+
+/* ── draw SVG connector lines ── */
+function drawConnectors(achieved){
+  var svg=$('svg-layer');
+  svg.innerHTML='';
+  var mainEl=$('main');
+  var photo=$('photo-col');
+  if(!mainEl||!photo) return;
+
+  var mr=mainEl.getBoundingClientRect();
+  var pr=photo.getBoundingClientRect();
+  var px=(pr.left+pr.width/2)-mr.left;
+  var py_top=pr.top-mr.top+4;
+  var py_bot=pr.bottom-mr.top-4;
+
+  var gcIds=['gc0','gc1','gc2','gc3'];
+  var colors=achieved.map(function(a){return a?'#16a34a':'#dc2626';});
+
+  /* centre dot at photo */
+  function addDot(x,y,r,fill,opacity){
+    var d=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    d.setAttribute('cx',x);d.setAttribute('cy',y);d.setAttribute('r',r);
+    d.setAttribute('fill',fill);d.setAttribute('opacity',opacity||'1');
+    svg.appendChild(d);
+  }
+  function addLine(d1,col){
+    var p=document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d',d1);p.setAttribute('fill','none');
+    p.setAttribute('stroke',col);p.setAttribute('stroke-width','1.3');
+    p.setAttribute('stroke-dasharray','4,3');p.setAttribute('opacity','0.55');
+    svg.appendChild(p);
+  }
+
+  gcIds.forEach(function(id,i){
+    var card=$(id);
+    if(!card) return;
+    var cr=card.getBoundingClientRect();
+    var cx=(cr.left+cr.width/2)-mr.left;
+    var cy=(cr.top+cr.height/2)-mr.top;
+    var col=colors[i];
+
+    var isLeft=i<2;
+    var cardEdge=isLeft?(cr.right-mr.left):(cr.left-mr.left);
+    var photoEdge=isLeft?(pr.left-mr.left):(pr.right-mr.left);
+    var midX=(cardEdge+photoEdge)/2;
+
+    /* elbow path: card edge → mid → photo edge at vertical midpoint of photo */
+    var d='M'+cardEdge+','+cy+' H'+midX+' V'+py_top+' H'+px;
+    addLine(d,col);
+    addDot(cardEdge,cy,2.5,col,'0.8');
+  });
+
+  /* centre dot */
+  addDot(px,py_top,4,'#16a34a','0.9');
+}
+
+/* ── responsive sizing ── */
+function applyScale(){
+  var w=window.innerWidth,h=window.innerHeight;
+  var minDim=Math.min(w,h);
+
+  /* avatar */
+  var avSz=Math.min(90,Math.max(54,Math.round(w*0.1)));
+  var outer=$('av-outer'),inner=$('av-inner');
+  if(outer){outer.style.width=(avSz+8)+'px';outer.style.height=(avSz+8)+'px';}
+  if(inner){inner.style.width=avSz+'px';inner.style.height=avSz+'px';}
+  $('av-ini').style.fontSize=Math.round(avSz*0.32)+'px';
+
+  /* card value font */
+  var valFs=Math.min(18,Math.max(11,Math.round(w*0.022)));
+  document.querySelectorAll('.gc-val').forEach(function(el){el.style.fontSize=valFs+'px';});
+
+  /* card padding */
+  var cp=Math.min(12,Math.max(7,Math.round(w*0.012)));
+  document.querySelectorAll('.gc').forEach(function(el){
+    el.style.padding=cp+'px '+(cp+1)+'px '+(cp-1)+'px';
+  });
+
+  /* name font */
+  $('mgr-name').style.fontSize=Math.min(13,Math.max(9,Math.round(w*0.016)))+'px';
+
+  setTimeout(function(){drawConnectors(window._achieved||[true,true,true,true]);},40);
+}
+
+if(window.ResizeObserver){
+  new ResizeObserver(applyScale).observe(document.getElementById('main'));
+}
+window.addEventListener('resize',applyScale);
+
+/* ── set KPI card ── */
+function setCard(idx,label,actual,previous,budget){
+  var p='gc'+idx;
+  var isNPA=INVERT[idx];
+
+  $(p+'-lbl').textContent=label||LABELS[idx];
+  $(p+'-val').textContent=fmtN(actual);
+
+  /* delta */
+  var dEl=$(p+'-delta');
+  var vsEl=$(p+'-vs');
+  if(actual!==null&&previous!==null&&previous!==0){
+    var delta=actual-previous;
+    var pct=(delta/Math.abs(previous))*100;
+    var up=isNPA?delta<=0:delta>=0;
+    dEl.className='gc-delta '+(up?'up':'dn');
+    dEl.textContent=(up?'▲ ':'▼ ')+(pct>=0?'+':'')+pct.toFixed(1)+'%';
+    vsEl.textContent='vs previous period';
+  } else {
+    dEl.className='gc-delta neu'; dEl.textContent='—'; vsEl.textContent='';
+  }
+
+  /* attainment */
+  var barEl=$(p+'-bar'), attEl=$(p+'-att');
+  var achieved=false;
+  if(actual!==null&&budget!==null&&budget!==0){
+    var att=isNPA?(budget/actual)*100:(actual/budget)*100;
+    var fillW=Math.min(100,Math.max(0,att));
+    barEl.style.width=fillW+'%';
+    achieved=att>=100;
+    var gc=$(p);
+    gc.className='gc '+(achieved?'ok':'miss');
+    attEl.textContent=Math.round(att)+'% of target';
+  } else {
+    barEl.style.width='0%';
+    attEl.textContent='';
+    achieved=true; /* default green if no budget */
+    $(p).className='gc ok';
+  }
+  return achieved;
+}
+
+/* ── initials + colour ── */
+function ini(name){
+  if(!name) return '?';
+  var p=name.trim().split(/\s+/);
+  return p.length===1?p[0].slice(0,2).toUpperCase():(p[0][0]+p[p.length-1][0]).toUpperCase();
+}
+var COLS=['#15803d','#1d4ed8','#854f0b','#7c3aed','#0e7490','#be185d'];
+function nameCol(n){var s=0;for(var i=0;i<(n||'').length;i++)s+=n.charCodeAt(i);return COLS[s%COLS.length];}
+
+/* ── data reader — confirmed working ── */
+async function getData(ws){
+  var rows=[],rdr=await ws.getSummaryDataReaderAsync(undefined,{ignoreSelection:true});
+  for(var i=0;i<rdr.pageCount;i++){
+    var pg=await rdr.getPageAsync(i);
+    pg.data.forEach(function(r){
+      var row={};
+      pg.columns.forEach(function(c,idx){row[c.fieldName]=r[idx];});
+      rows.push(row);
+    });
+  }
+  await rdr.releaseAsync();
+  return rows;
+}
+
+async function getEnc(ws){
+  var spec=await ws.getVisualSpecificationAsync(),map={};
+  if(spec.activeMarksSpecificationIndex<0) return map;
+  spec.marksSpecifications[spec.activeMarksSpecificationIndex]
+      .encodings.forEach(function(e){map[e.id]=e.field;});
+  return map;
+}
+
+/* ── update Tableau parameter "selkpi" ── */
+function updateParam(ws,categoryValue){
+  try{
+    ws.getParametersAsync().then(function(params){
+      var p=params.find(function(x){return x.name==='selkpi';});
+      if(p) p.changeValueAsync(categoryValue);
+    });
+  }catch(e){console.warn('param update failed:',e);}
+}
+
+/* ── render ── */
+function render(data,enc,ws){
+  if(!data.length) return;
+
+  var row0=data[0];
+
+  function dvStr(row,id){
+    if(!enc[id]) return null;
+    var d=row[enc[id].name];if(!d) return null;
+    var f=d.formattedValue;
+    return(f&&f!=='%null%'&&f!=='Null'&&f.trim()!=='')?f.trim():null;
+  }
+  function dvNum(row,id){
+    if(!enc[id]) return null;
+    var d=row[enc[id].name];if(!d) return null;
+    var n=parseFloat(d.nativeValue!==undefined?d.nativeValue:d.value);
+    return isNaN(n)?null:n;
+  }
+
+  /* ── manager name + image from Detail/Tooltip fields not in encodings ── */
+  var usedKeys=[];
+  Object.keys(enc).forEach(function(k){if(enc[k])usedKeys.push(enc[k].name);});
+  var managerName=null,imageUrl=null;
+  Object.keys(row0).forEach(function(k){
+    if(usedKeys.indexOf(k)>=0) return;
+    var dv=row0[k];if(!dv) return;
+    var f=(dv.formattedValue||'').trim();
+    if(!f||f==='%null%'||f==='Null') return;
+    if(!imageUrl&&/^https?:\/\//i.test(f)) imageUrl=f;
+    else if(!managerName&&!/^\d+$/.test(f)&&f.length>2&&f.length<60) managerName=f;
+  });
+
+  /* set photo */
+  var img=$('av-img'),iniEl=$('av-ini');
+  var initials=ini(managerName||'M');
+  var col=nameCol(managerName||'');
+  iniEl.textContent=initials; iniEl.style.color=col;
+
+  if(imageUrl){
+    img.onload=function(){img.style.display='block';iniEl.style.display='none';};
+    img.onerror=function(){img.style.display='none';iniEl.style.display='flex';iniEl.style.background=col+'18';};
+    img.style.display='block'; iniEl.style.display='none';
+    img.src=imageUrl;
+  } else {
+    img.style.display='none'; iniEl.style.display='flex'; iniEl.style.background=col+'18';
+  }
+  $('mgr-name').textContent=managerName||'Manager';
+
+  /* ── KPI cards ── */
+  var cards=[null,null,null,null];
+  data.forEach(function(row){
+    var cat=dvStr(row,'category');
+    if(!cat) return;
+    var idx=CMAP[cat.toLowerCase().trim()];
+    if(idx===undefined) return;
+    cards[idx]={label:cat,actual:dvNum(row,'actual'),previous:dvNum(row,'previous'),budget:dvNum(row,'budget')};
+  });
+
+  var achieved=[true,true,true,true];
+  cards.forEach(function(card,i){
+    if(card) achieved[i]=setCard(i,card.label,card.actual,card.previous,card.budget);
+    else setCard(i,LABELS[i],null,null,null);
+  });
+
+  window._achieved=achieved;
+  updateRing(achieved);
+  applyScale();
+}
+
+/* ── click on card → update parameter ── */
+function wireCardClicks(ws){
+  for(var i=0;i<4;i++){
+    (function(idx){
+      var el=$('gc'+idx);
+      if(!el) return;
+      el.addEventListener('click',function(){
+        var lbl=el.querySelector('.gc-lbl');
+        if(lbl) updateParam(ws,lbl.textContent);
+        /* visual feedback */
+        el.style.transform='scale(0.97)';
+        setTimeout(function(){el.style.transform='';},150);
+      });
+    })(i);
+  }
+}
+
+/* ── splash → main transition ── */
+function showMain(){
+  var splash=$('splash');
+  splash.style.opacity='0';
+  setTimeout(function(){
+    splash.style.display='none';
+    var main=$('main');
+    main.style.display='flex';
+    applyScale();
+  },500);
+}
+
+/* ── confirmed working init pattern ── */
+window.onload=tableau.extensions.initializeAsync().then(function(){
+  var ws=tableau.extensions.worksheetContent.worksheet;
+  wireCardClicks(ws);
+
+  var dataReady=false, timerDone=false;
+
+  setTimeout(function(){
+    timerDone=true;
+    if(dataReady) showMain();
+  },2000);
+
+  var update=async function(){
+    var data=await getData(ws);
+    var enc =await getEnc(ws);
+    render(data,enc,ws);
+    dataReady=true;
+    if(timerDone) showMain();
+  };
+
+  ws.addEventListener(tableau.TableauEventType.SummaryDataChanged,function(){
+    getData(ws).then(function(data){
+      getEnc(ws).then(function(enc){render(data,enc,ws);});
+    });
+  });
+  update();
+});
+
+})();
 </script>
 </body>
 </html>
