@@ -484,7 +484,7 @@ function setCard(idx,label,actual,previous,budget){
     var up=isNPA?delta<=0:delta>=0;
     dEl.className='gc-delta '+(up?'up':'dn');
     dEl.textContent=(up?'▲ ':'▼ ')+(pct>=0?'+':'')+pct.toFixed(1)+'%';
-    vsEl.textContent='vs previous period';
+    vsEl.textContent='vs previous month';
   } else {
     dEl.className='gc-delta neu'; dEl.textContent='—'; vsEl.textContent='';
   }
