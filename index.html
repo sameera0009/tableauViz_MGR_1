@@ -2,141 +2,247 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>Manager Performance</title>
 <script src="https://cdn.jsdelivr.net/gh/tableau/extensions-api/lib/tableau.extensions.1.latest.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
 html,body{
-  width:100%;height:100%;background:#f0f0ec;
-  font-family:'Inter',-apple-system,sans-serif;
-  overflow:hidden;-webkit-font-smoothing:antialiased;
+  width:100%;height:100%;
+  background:radial-gradient(circle at 20% 30%,#eef2f5,#e2e8f0);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
 }
 
 /* ══════════════════════════════
    SPLASH
 ══════════════════════════════ */
 #splash{
-  position:fixed;inset:0;background:#f0f0ec;z-index:999;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
-  transition:opacity .5s ease;
+  position:fixed;inset:0;z-index:999;
+  background:radial-gradient(circle at 20% 30%,#eef2f5,#e2e8f0);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  transition:opacity .55s ease;
 }
 .sp-logo{
-  width:56px;height:56px;border-radius:16px;
-  background:#fff;border:0.5px solid #e2e8f0;
+  width:58px;height:58px;border-radius:18px;
+  background:rgba(255,255,255,0.85);
+  border:1px solid rgba(255,255,255,0.9);
+  backdrop-filter:blur(12px);
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 2px 14px rgba(0,0,0,0.08);margin-bottom:6px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.1);
+  margin-bottom:6px;
 }
-.sp-name{font-size:14px;font-weight:700;color:#0f172a;letter-spacing:-.01em;}
-.sp-by{font-size:10px;font-weight:500;color:#94a3b8;letter-spacing:.05em;}
-.sp-track{width:90px;height:2px;background:#e2e8f0;border-radius:99px;overflow:hidden;margin-top:14px;}
-.sp-fill{height:100%;width:0;background:linear-gradient(90deg,#16a34a,#0d9488);border-radius:99px;animation:spload 1.8s ease forwards;}
+.sp-name{font-size:15px;font-weight:800;color:#0f172a;letter-spacing:-.02em;}
+.sp-by{font-size:10.5px;font-weight:500;color:#94a3b8;letter-spacing:.06em;}
+.sp-track{
+  width:96px;height:3px;background:rgba(0,0,0,0.08);
+  border-radius:99px;overflow:hidden;margin-top:16px;
+}
+.sp-fill{
+  height:100%;width:0;
+  background:linear-gradient(90deg,#10b981,#34d399);
+  border-radius:99px;
+  animation:spload 1.9s cubic-bezier(.4,0,.2,1) forwards;
+}
 @keyframes spload{to{width:100%}}
 
 /* ══════════════════════════════
    MAIN
 ══════════════════════════════ */
 #main{
-  display:none;width:100%;height:100%;
+  display:none;
+  width:100%;height:100%;
   position:relative;
   align-items:center;justify-content:center;
-  padding:10px 8px;
+  padding:24px 28px;
+  background:radial-gradient(ellipse at 70% 40%,rgba(255,255,245,.4),rgba(226,232,240,.2));
 }
 
-/* grid: [card][card][photo][card][card] */
-.grid{
+/* ── LAYOUT GRID ──
+   photo sits centre column, its vertical MID aligns with cards' TOP
+   We achieve this with a 2-row sub-grid approach:
+   Row 1 (photo bottom half + card body)
+   Actually: CSS grid align-items:center + negative margin on photo col        */
+.dash-grid{
   display:grid;
   grid-template-columns:1fr 1fr auto 1fr 1fr;
-  align-items:center;
-  gap:10px;
-  width:100%;
-  position:relative;z-index:2;
+  gap:20px;
+  align-items:end;           /* cards bottom-align */
+  width:100%;max-width:1400px;
+  margin:0 auto;
+  position:relative;z-index:5;
 }
 
 /* SVG connector overlay */
 #svg-layer{
   position:absolute;inset:0;
-  pointer-events:none;overflow:visible;z-index:1;
+  pointer-events:none;z-index:2;
+  overflow:visible;
+  filter:drop-shadow(0 2px 1px rgba(0,0,0,.05));
 }
 
-/* ── PHOTO COLUMN ── */
+/* ── PHOTO COLUMN ──
+   Photo is taller than cards: its bottom edge aligns with cards bottom,
+   so its vertical centre sits roughly at cards' top-third → matches reference  */
 .photo-col{
   display:flex;flex-direction:column;
-  align-items:center;gap:6px;
-  position:relative;flex-shrink:0;
+  align-items:center;gap:10px;
+  position:relative;z-index:8;
+  /* push photo UP so its centre lines up with card tops */
+  margin-bottom:0;
+  transform:translateY(-38%);
 }
-/* conic ring — 4 quadrants, green=achieved red=missed */
+
 .av-outer{
-  border-radius:50%;padding:3.5px;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 24px rgba(0,0,0,0.14);
-  transition:background .4s ease;
+  border-radius:50%;padding:5px;
+  box-shadow:0 20px 35px -15px rgba(0,0,0,.25),0 0 0 2px rgba(255,255,240,.5);
+  background:conic-gradient(#10b981 0% 25%,#34d399 25% 50%,#10b981 50% 75%,#34d399 75% 100%);
+  cursor:pointer;
+  transition:transform .2s ease;
+  animation:subtlePulse 3s infinite alternate ease-in-out;
 }
+.av-outer:hover{transform:scale(1.03);box-shadow:0 28px 40px -18px rgba(0,0,0,.3);}
+@keyframes subtlePulse{
+  0%{box-shadow:0 20px 35px -15px rgba(0,0,0,.25),0 0 0 2px rgba(255,255,240,.5);}
+  100%{box-shadow:0 24px 42px -12px rgba(0,0,0,.3),0 0 0 3px rgba(255,255,240,.6);}
+}
+
 .av-inner{
   border-radius:50%;
-  border:3px solid #fff;
-  overflow:hidden;background:#e8f5e9;
+  border:3px solid rgba(255,255,255,.92);
+  overflow:hidden;background:#f1f5f9;
   display:flex;align-items:center;justify-content:center;
-  position:relative;
+  position:relative;transition:all .2s;
 }
 #av-img{width:100%;height:100%;object-fit:cover;display:block;}
 #av-ini{
-  width:100%;height:100%;
-  display:none;align-items:center;justify-content:center;
-  font-weight:700;color:#15803d;
-  position:absolute;inset:0;
+  width:100%;height:100%;display:none;
+  align-items:center;justify-content:center;
+  font-weight:700;font-size:32px;
+  font-family:'Inter',sans-serif;
+  position:absolute;inset:0;background:#eef2ff;
 }
+
 #mgr-name{
-  font-size:12px;font-weight:700;color:#0f172a;
-  text-align:center;white-space:nowrap;letter-spacing:-.01em;
+  font-size:13.5px;font-weight:700;
+  background:linear-gradient(120deg,#0f172a,#2d3a5e);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  text-align:center;letter-spacing:-.2px;
+  padding:5px 14px;border-radius:40px;
+  background-color:rgba(255,255,245,.6);
+  backdrop-filter:blur(4px);
+  white-space:nowrap;
 }
 
-/* ── GLASS KPI CARD ── */
+/* ══════════════════════════════
+   GLASS KPI CARDS
+══════════════════════════════ */
 .gc{
-  background:rgba(255,255,255,0.58);
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border:0.5px solid rgba(255,255,255,0.75);
-  border-radius:14px;padding:11px 12px 9px;
-  box-shadow:0 2px 14px rgba(15,23,42,0.07),inset 0 1px 0 rgba(255,255,255,0.9);
-  position:relative;overflow:hidden;
-  cursor:pointer;transition:transform .15s,box-shadow .15s;
-  min-width:0;
+  background:rgba(255,255,255,.7);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.65);
+  border-radius:28px;
+  padding:18px 16px 44px;     /* extra bottom padding for kpi badge */
+  box-shadow:0 8px 20px -6px rgba(0,0,0,.08),0 0 0 .5px rgba(255,255,245,.9) inset;
+  position:relative;cursor:pointer;
+  transition:all .25s cubic-bezier(.2,.9,.4,1.1);
+  overflow:hidden;min-width:0;
 }
-.gc:hover{transform:translateY(-2px);box-shadow:0 6px 28px rgba(15,23,42,0.12);}
+.gc:hover{
+  transform:translateY(-5px);
+  background:rgba(255,255,255,.88);
+  box-shadow:0 22px 32px -12px rgba(0,0,0,.22);
+  border-color:rgba(255,255,255,.9);
+}
+/* shine sweep */
+.gc::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(120deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.42) 40%,rgba(255,255,255,0) 80%);
+  transform:translateX(-100%);transition:transform .6s;pointer-events:none;border-radius:28px;
+}
+.gc:hover::after{transform:translateX(100%);}
 /* top stripe */
-.gc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0;}
-.gc.ok::before{background:#16a34a;}
-.gc.miss::before{background:#dc2626;}
-/* sheen */
-.gc::after{content:'';position:absolute;inset:0;background:linear-gradient(140deg,rgba(255,255,255,0.2) 0%,transparent 55%);border-radius:14px;pointer-events:none;}
+.gc::before{
+  content:'';position:absolute;
+  top:0;left:12px;right:12px;height:4px;border-radius:20px;
+  transition:all .2s;
+}
+.gc.ok::before{background:#10b981;box-shadow:0 0 6px #34d399;}
+.gc.miss::before{background:#ef4444;box-shadow:0 0 4px #f87171;}
 
-.gc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
-.gc-icon{width:27px;height:27px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.gc.ok .gc-icon{background:#dcfce7;}
-.gc.miss .gc-icon{background:#fee2e2;}
-.gc-lbl{font-size:7.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;}
-.gc-val{font-size:17px;font-weight:700;color:#0f172a;letter-spacing:-.02em;line-height:1;margin-bottom:3px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.gc-delta{font-size:9px;font-weight:700;margin-bottom:1px;display:flex;align-items:center;gap:2px;}
-.gc-delta.up{color:#15803d;}.gc-delta.dn{color:#b91c1c;}.gc-delta.neu{color:#94a3b8;}
-.gc-vs{font-size:7.5px;color:#94a3b8;margin-bottom:7px;}
-.gc-bar{height:3px;background:rgba(0,0,0,0.07);border-radius:99px;overflow:hidden;margin-bottom:3px;}
-.gc-fill{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.22,.68,0,1);}
-.gc.ok .gc-fill{background:#16a34a;}
-.gc.miss .gc-fill{background:#dc2626;}
-.gc-att{font-size:7.5px;font-weight:600;}
-.gc.ok .gc-att{color:#15803d;}.gc.miss .gc-att{color:#b91c1c;}
+.gc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.gc-icon{
+  width:36px;height:36px;border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  transition:.2s;
+}
+.gc.ok  .gc-icon{background:#d1fae5;color:#065f46;}
+.gc.miss .gc-icon{background:#fee2e2;color:#991b1b;}
+
+.gc-lbl{
+  font-size:11px;font-weight:700;letter-spacing:.8px;
+  text-transform:uppercase;color:#475569;
+  background:rgba(0,0,0,.03);padding:4px 8px;border-radius:30px;
+}
+
+.gc-val{
+  font-size:28px;font-weight:800;color:#0a0c10;
+  letter-spacing:-.02em;line-height:1.1;
+  margin:8px 0 6px;
+  font-feature-settings:'tnum';
+  font-family:'JetBrains Mono',monospace;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+.gc-delta{
+  font-size:12px;font-weight:700;
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:50px;
+  width:fit-content;margin-bottom:8px;
+}
+.gc-delta.up{color:#047857;background:#e0f2e9;}
+.gc-delta.dn{color:#b91c1c;background:#ffe4e4;}
+.gc-delta.neu{color:#64748b;background:#f1f5f9;}
+
+.gc-vs{font-size:9px;font-weight:500;color:#5b6e8c;margin-bottom:12px;letter-spacing:.2px;}
+
+.gc-bar{height:6px;background:rgba(0,0,0,.08);border-radius:12px;overflow:hidden;margin:8px 0 6px;}
+.gc-fill{height:100%;border-radius:12px;width:0;transition:width .8s cubic-bezier(.22,.97,.36,1);}
+.gc.ok  .gc-fill{background:linear-gradient(90deg,#10b981,#34d399);}
+.gc.miss .gc-fill{background:linear-gradient(90deg,#ef4444,#f97316);}
+
+.gc-att{font-size:10px;font-weight:600;margin-top:6px;text-align:right;letter-spacing:-.2px;}
+.gc.ok  .gc-att{color:#0b5e42;}
+.gc.miss .gc-att{color:#b91c1c;}
+
+.kpi-badge{
+  position:absolute;bottom:12px;left:16px;
+  font-size:8px;font-weight:600;text-transform:uppercase;
+  background:rgba(0,0,0,.04);padding:2px 8px;border-radius:20px;color:#4a5a7a;
+}
+
+@media(max-width:860px){
+  .dash-grid{gap:12px;}
+  .gc-val{font-size:20px;}
+  .gc-icon{width:28px;height:28px;}
+  .gc-lbl{font-size:9px;}
+}
 </style>
 </head>
 <body>
 
-<!-- SPLASH -->
+<!-- ── SPLASH ── -->
 <div id="splash">
   <div class="sp-logo">
     <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-      <rect x="2" y="2" width="24" height="24" rx="7" stroke="#16a34a" stroke-width="1.8"/>
-      <polyline points="5,19 9,13 13,16 20,8" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="20" cy="8" r="2" fill="#16a34a"/>
+      <rect x="2" y="2" width="24" height="24" rx="7" stroke="#10b981" stroke-width="1.8"/>
+      <polyline points="5,19 9,13 13,16 20,8" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="20" cy="8" r="2" fill="#10b981"/>
     </svg>
   </div>
   <div class="sp-name">Manager Performance</div>
@@ -144,45 +250,53 @@ html,body{
   <div class="sp-track"><div class="sp-fill"></div></div>
 </div>
 
-<!-- MAIN -->
+<!-- ── MAIN ── -->
 <div id="main">
   <svg id="svg-layer" aria-hidden="true"></svg>
 
-  <div class="grid" id="grid">
+  <div class="dash-grid" id="grid">
 
-    <!-- Card 0: left side card 1 (Profit) -->
-    <div class="gc ok" id="gc0" data-idx="0">
+    <!-- KPI 0 : Profit (left 1) -->
+    <div class="gc ok" id="gc0">
       <div class="gc-top">
         <div class="gc-icon">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="1,11 4,6.5 7,8.5 13,2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <polyline points="3 15 9 9 14 13 21 6"/>
+            <path d="M21 10V4h-6"/>
+          </svg>
         </div>
         <span class="gc-lbl" id="gc0-lbl">Profit</span>
       </div>
       <div class="gc-val" id="gc0-val">—</div>
       <div class="gc-delta neu" id="gc0-delta">—</div>
       <div class="gc-vs" id="gc0-vs"></div>
-      <div class="gc-bar"><div class="gc-fill" id="gc0-bar" style="width:0%"></div></div>
+      <div class="gc-bar"><div class="gc-fill" id="gc0-bar"></div></div>
       <div class="gc-att" id="gc0-att"></div>
+      <div class="kpi-badge">KPI 01</div>
     </div>
 
-    <!-- Card 1: left side card 2 (Advances) -->
-    <div class="gc ok" id="gc1" data-idx="1">
+    <!-- KPI 1 : Advances (left 2) -->
+    <div class="gc ok" id="gc1">
       <div class="gc-top">
         <div class="gc-icon">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 7h5M9.5 7L7.5 5M9.5 7L7.5 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 8v8M8 12h8"/>
+          </svg>
         </div>
         <span class="gc-lbl" id="gc1-lbl">Advances</span>
       </div>
       <div class="gc-val" id="gc1-val">—</div>
       <div class="gc-delta neu" id="gc1-delta">—</div>
       <div class="gc-vs" id="gc1-vs"></div>
-      <div class="gc-bar"><div class="gc-fill" id="gc1-bar" style="width:0%"></div></div>
+      <div class="gc-bar"><div class="gc-fill" id="gc1-bar"></div></div>
       <div class="gc-att" id="gc1-att"></div>
+      <div class="kpi-badge">KPI 02</div>
     </div>
 
     <!-- PHOTO CENTRE -->
     <div class="photo-col" id="photo-col">
-      <div class="av-outer" id="av-outer" style="background:conic-gradient(#16a34a 0% 25%,#16a34a 25% 50%,#16a34a 50% 75%,#16a34a 75% 100%)">
+      <div class="av-outer" id="av-outer">
         <div class="av-inner" id="av-inner">
           <img id="av-img" src="" alt="Manager photo"/>
           <div id="av-ini"></div>
@@ -191,34 +305,42 @@ html,body{
       <div id="mgr-name">—</div>
     </div>
 
-    <!-- Card 2: right side card 1 (Deposits) -->
-    <div class="gc ok" id="gc2" data-idx="2">
+    <!-- KPI 2 : Deposits (right 1) -->
+    <div class="gc ok" id="gc2">
       <div class="gc-top">
         <div class="gc-icon">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="5" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 5V3.5a2 2 0 0 1 4 0V5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="9" width="18" height="12" rx="2"/>
+            <path d="M7 9V6a5 5 0 0 1 10 0v3"/>
+          </svg>
         </div>
         <span class="gc-lbl" id="gc2-lbl">Deposits</span>
       </div>
       <div class="gc-val" id="gc2-val">—</div>
       <div class="gc-delta neu" id="gc2-delta">—</div>
       <div class="gc-vs" id="gc2-vs"></div>
-      <div class="gc-bar"><div class="gc-fill" id="gc2-bar" style="width:0%"></div></div>
+      <div class="gc-bar"><div class="gc-fill" id="gc2-bar"></div></div>
       <div class="gc-att" id="gc2-att"></div>
+      <div class="kpi-badge">KPI 03</div>
     </div>
 
-    <!-- Card 3: right side card 2 (NPA %) -->
-    <div class="gc ok" id="gc3" data-idx="3">
+    <!-- KPI 3 : NPA % (right 2) -->
+    <div class="gc ok" id="gc3">
       <div class="gc-top">
         <div class="gc-icon">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.4"/><text x="7" y="10.5" text-anchor="middle" font-size="7.5" font-weight="700" fill="currentColor" font-family="Inter,sans-serif">%</text></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="10"/>
+            <text x="12" y="16" font-size="9" font-weight="700" fill="currentColor" text-anchor="middle" stroke="none">%</text>
+          </svg>
         </div>
         <span class="gc-lbl" id="gc3-lbl">NPA %</span>
       </div>
       <div class="gc-val" id="gc3-val">—</div>
       <div class="gc-delta neu" id="gc3-delta">—</div>
       <div class="gc-vs" id="gc3-vs"></div>
-      <div class="gc-bar"><div class="gc-fill" id="gc3-bar" style="width:0%"></div></div>
+      <div class="gc-bar"><div class="gc-fill" id="gc3-bar"></div></div>
       <div class="gc-att" id="gc3-att"></div>
+      <div class="kpi-badge">KPI 04</div>
     </div>
 
   </div>
@@ -229,142 +351,134 @@ html,body{
 (function(){
 
 var $=function(id){return document.getElementById(id);};
-var appEl=document.getElementById('main');
 
-/* ── number format — no currency, smart units ── */
-function fmtN(n){
-  if(n===null||isNaN(n)) return '—';
-  var abs=Math.abs(n),s=n<0?'-':'';
-  if(abs>=1e9) return s+(abs/1e9).toFixed(2)+' B';
-  if(abs>=1e6) return s+(abs/1e6).toFixed(2)+' M';
-  if(abs>=1e3) return s+(abs/1e3).toFixed(2)+' K';
-  if(abs>=1)   return s+abs.toFixed(2);
-  return s+(abs*100).toFixed(2)+'%'; /* sub-1 treated as percentage */
-}
-
-/* ── category → card index mapping ── */
+/* ── category → card index ── */
 var CMAP={
   'first card':0,'1st':0,'card1':0,'card 1':0,'profit':0,
   'second card':1,'2nd':1,'card2':1,'card 2':1,'advances':1,'advance':1,
-  'third card':2,'3rd':2,'card3':2,'card 3':2,'deposits':2,'deposit':2,
+  'third card':2,'3rd':2,'card3':2,'card 2':2,'deposits':2,'deposit':2,
   'fourth card':3,'4th':3,'card4':3,'card 4':3,'npa':3,'npa %':3,'npa%':3
 };
 var LABELS=['Profit','Advances','Deposits','NPA %'];
-var INVERT=[false,false,false,true]; /* NPA: lower is better */
+var INVERT=[false,false,false,true];
 
-/* ── update conic gradient ring based on achievement array ── */
-function updateRing(achieved){
-  /* 4 quadrants: top-right, bottom-right, bottom-left, top-left
-     mapped to card positions: c0=left1, c1=left2, c2=right1, c3=right2
-     ring quadrant order (conic from top): c0(left1), c1(left2), c2(right1), c3(right2) */
-  var stops=achieved.map(function(a){return a?'#16a34a':'#dc2626';});
-  var conic='conic-gradient('+
-    stops[0]+' 0% 25%,'+
-    stops[1]+' 25% 50%,'+
-    stops[2]+' 50% 75%,'+
-    stops[3]+' 75% 100%)';
-  $('av-outer').style.background=conic;
+/* ── number format — no currency ── */
+function fmtN(n){
+  if(n===null||isNaN(n)) return '—';
+  var abs=Math.abs(n),s=n<0?'-':'';
+  if(abs>=1e9) return s+(abs/1e9).toFixed(2)+'B';
+  if(abs>=1e6) return s+(abs/1e6).toFixed(2)+'M';
+  if(abs>=1e3) return s+(abs/1e3).toFixed(2)+'K';
+  if(abs>=1)   return s+abs.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  return s+(abs*100).toFixed(2)+'%';
 }
 
-/* ── draw SVG connector lines ── */
+/* ── conic ring ── */
+function updateRing(achieved){
+  var stops=achieved.map(function(a){return a?'#10b981':'#ef4444';});
+  $('av-outer').style.background=
+    'conic-gradient('+stops[0]+' 0% 25%,'+stops[1]+' 25% 50%,'+stops[2]+' 50% 75%,'+stops[3]+' 75% 100%)';
+}
+
+/* ── SVG connector lines — matches reference image:
+   horizontal line from photo bottom to each card top centre           ── */
 function drawConnectors(achieved){
   var svg=$('svg-layer');
   svg.innerHTML='';
   var mainEl=$('main');
-  var photo=$('photo-col');
-  if(!mainEl||!photo) return;
-
+  var photoCol=$('photo-col');
+  if(!mainEl||!photoCol) return;
   var mr=mainEl.getBoundingClientRect();
-  var pr=photo.getBoundingClientRect();
-  var px=(pr.left+pr.width/2)-mr.left;
-  var py_top=pr.top-mr.top+4;
-  var py_bot=pr.bottom-mr.top-4;
+  var pr=photoCol.getBoundingClientRect();
+
+  /* anchor point: bottom-centre of photo column (where name tag is) */
+  var pX=(pr.left+pr.width/2)-mr.left;
+  /* use vertical midpoint of the av-outer as the connection hub */
+  var avOuter=$('av-outer');
+  var avR=avOuter?avOuter.getBoundingClientRect():pr;
+  var pY=(avR.top+avR.height*0.5)-mr.top; /* vertical centre of photo */
 
   var gcIds=['gc0','gc1','gc2','gc3'];
-  var colors=achieved.map(function(a){return a?'#16a34a':'#dc2626';});
+  var colors=achieved.map(function(a){return a?'#10b981':'#ef4444';});
 
-  /* centre dot at photo */
-  function addDot(x,y,r,fill,opacity){
-    var d=document.createElementNS('http://www.w3.org/2000/svg','circle');
-    d.setAttribute('cx',x);d.setAttribute('cy',y);d.setAttribute('r',r);
-    d.setAttribute('fill',fill);d.setAttribute('opacity',opacity||'1');
-    svg.appendChild(d);
-  }
-  function addLine(d1,col){
+  function addPath(d,col){
     var p=document.createElementNS('http://www.w3.org/2000/svg','path');
-    p.setAttribute('d',d1);p.setAttribute('fill','none');
-    p.setAttribute('stroke',col);p.setAttribute('stroke-width','1.3');
-    p.setAttribute('stroke-dasharray','4,3');p.setAttribute('opacity','0.55');
+    p.setAttribute('d',d); p.setAttribute('fill','none');
+    p.setAttribute('stroke',col); p.setAttribute('stroke-width','1.8');
+    p.setAttribute('stroke-dasharray','5,4'); p.setAttribute('opacity','0.6');
     svg.appendChild(p);
   }
+  function addCircle(cx,cy,r,fill,sw,stroke){
+    var c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',cx); c.setAttribute('cy',cy);
+    c.setAttribute('r',r); c.setAttribute('fill',fill);
+    if(sw){c.setAttribute('stroke-width',sw);c.setAttribute('stroke',stroke||'#fff');}
+    svg.appendChild(c);
+  }
 
+  /* horizontal reference line at pY connecting all cards */
+  /* draw individual paths card→photo */
   gcIds.forEach(function(id,i){
     var card=$(id);
     if(!card) return;
     var cr=card.getBoundingClientRect();
-    var cx=(cr.left+cr.width/2)-mr.left;
-    var cy=(cr.top+cr.height/2)-mr.top;
-    var col=colors[i];
+    var cX=(cr.left+cr.width/2)-mr.left;
+    var cY_top=cr.top-mr.top; /* top edge of card */
 
     var isLeft=i<2;
-    var cardEdge=isLeft?(cr.right-mr.left):(cr.left-mr.left);
-    var photoEdge=isLeft?(pr.left-mr.left):(pr.right-mr.left);
-    var midX=(cardEdge+photoEdge)/2;
+    var col=colors[i];
 
-    /* elbow path: card edge → mid → photo edge at vertical midpoint of photo */
-    var d='M'+cardEdge+','+cy+' H'+midX+' V'+py_top+' H'+px;
-    addLine(d,col);
-    addDot(cardEdge,cy,2.5,col,'0.8');
+    /* path: card-top-centre → up to pY → across to pX
+       This creates the T-bar shape seen in the reference image:
+       vertical from card top → horizontal at photo level → photo centre */
+    var pathD;
+    if(isLeft){
+      /* left cards: go up then right to photo */
+      pathD='M '+cX+' '+cY_top+' L '+cX+' '+pY+' L '+pX+' '+pY;
+    } else {
+      /* right cards: go up then left to photo */
+      pathD='M '+cX+' '+cY_top+' L '+cX+' '+pY+' L '+pX+' '+pY;
+    }
+    addPath(pathD,col);
+
+    /* small open circle at card top */
+    addCircle(cX,cY_top,4,'#f0f4f8',1.8,col);
   });
 
-  /* centre dot */
-  addDot(px,py_top,4,'#16a34a','0.9');
+  /* central filled dot at photo */
+  addCircle(pX,pY,5,'#059669',1.5,'#fff');
 }
 
-/* ── responsive sizing ── */
-function applyScale(){
-  var w=window.innerWidth,h=window.innerHeight;
-  var minDim=Math.min(w,h);
-
-  /* avatar */
-  var avSz=Math.min(90,Math.max(54,Math.round(w*0.1)));
+/* ── resize + connectors ── */
+function applyScale(achieved){
+  var w=window.innerWidth;
+  var sz=Math.min(96,Math.max(62,Math.round(w*0.09)));
   var outer=$('av-outer'),inner=$('av-inner');
-  if(outer){outer.style.width=(avSz+8)+'px';outer.style.height=(avSz+8)+'px';}
-  if(inner){inner.style.width=avSz+'px';inner.style.height=avSz+'px';}
-  $('av-ini').style.fontSize=Math.round(avSz*0.32)+'px';
-
-  /* card value font */
-  var valFs=Math.min(18,Math.max(11,Math.round(w*0.022)));
+  if(outer){outer.style.width=(sz+10)+'px';outer.style.height=(sz+10)+'px';}
+  if(inner){inner.style.width=sz+'px';inner.style.height=sz+'px';}
+  $('av-ini').style.fontSize=Math.round(sz*0.32)+'px';
+  var valFs=Math.min(26,Math.max(16,Math.round(w*0.024)));
   document.querySelectorAll('.gc-val').forEach(function(el){el.style.fontSize=valFs+'px';});
-
-  /* card padding */
-  var cp=Math.min(12,Math.max(7,Math.round(w*0.012)));
+  var pad=Math.min(16,Math.max(10,Math.round(w*0.014)));
   document.querySelectorAll('.gc').forEach(function(el){
-    el.style.padding=cp+'px '+(cp+1)+'px '+(cp-1)+'px';
+    el.style.padding=pad+'px '+pad+'px '+(pad+26)+'px';
   });
-
-  /* name font */
-  $('mgr-name').style.fontSize=Math.min(13,Math.max(9,Math.round(w*0.016)))+'px';
-
-  setTimeout(function(){drawConnectors(window._achieved||[true,true,true,true]);},40);
+  /* redraw after layout settles */
+  setTimeout(function(){drawConnectors(achieved||[true,true,true,true]);},50);
 }
 
-if(window.ResizeObserver){
-  new ResizeObserver(applyScale).observe(document.getElementById('main'));
-}
-window.addEventListener('resize',applyScale);
+window.addEventListener('resize',function(){
+  applyScale(window._achieved||[true,true,true,true]);
+});
 
 /* ── set KPI card ── */
 function setCard(idx,label,actual,previous,budget){
   var p='gc'+idx;
   var isNPA=INVERT[idx];
-
   $(p+'-lbl').textContent=label||LABELS[idx];
   $(p+'-val').textContent=fmtN(actual);
 
-  /* delta */
-  var dEl=$(p+'-delta');
-  var vsEl=$(p+'-vs');
+  var dEl=$(p+'-delta'), vsEl=$(p+'-vs');
   if(actual!==null&&previous!==null&&previous!==0){
     var delta=actual-previous;
     var pct=(delta/Math.abs(previous))*100;
@@ -376,36 +490,59 @@ function setCard(idx,label,actual,previous,budget){
     dEl.className='gc-delta neu'; dEl.textContent='—'; vsEl.textContent='';
   }
 
-  /* attainment */
   var barEl=$(p+'-bar'), attEl=$(p+'-att');
   var achieved=false;
   if(actual!==null&&budget!==null&&budget!==0){
     var att=isNPA?(budget/actual)*100:(actual/budget)*100;
-    var fillW=Math.min(100,Math.max(0,att));
-    barEl.style.width=fillW+'%';
+    att=Math.min(200,Math.max(0,att));
+    barEl.style.width=Math.min(100,att)+'%';
     achieved=att>=100;
-    var gc=$(p);
-    gc.className='gc '+(achieved?'ok':'miss');
+    $(p).className='gc '+(achieved?'ok':'miss');
     attEl.textContent=Math.round(att)+'% of target';
   } else {
-    barEl.style.width='0%';
-    attEl.textContent='';
-    achieved=true; /* default green if no budget */
-    $(p).className='gc ok';
+    barEl.style.width='0%'; attEl.textContent='';
+    achieved=true; $(p).className='gc ok';
   }
   return achieved;
 }
 
 /* ── initials + colour ── */
-function ini(name){
+function getIni(name){
   if(!name) return '?';
   var p=name.trim().split(/\s+/);
   return p.length===1?p[0].slice(0,2).toUpperCase():(p[0][0]+p[p.length-1][0]).toUpperCase();
 }
-var COLS=['#15803d','#1d4ed8','#854f0b','#7c3aed','#0e7490','#be185d'];
+var COLS=['#0f5b3a','#1e3a8a','#854d0e','#6b21a5','#0e7c6c','#be123c'];
 function nameCol(n){var s=0;for(var i=0;i<(n||'').length;i++)s+=n.charCodeAt(i);return COLS[s%COLS.length];}
 
-/* ── data reader — confirmed working ── */
+/* ── set manager photo ── */
+function setManager(name,imageUrl){
+  var img=$('av-img'), ini=$('av-ini');
+  var initials=getIni(name);
+  var col=nameCol(name);
+  ini.textContent=initials; ini.style.color=col;
+  if(imageUrl){
+    img.onload=function(){img.style.display='block';ini.style.display='none';};
+    img.onerror=function(){img.style.display='none';ini.style.display='flex';ini.style.background=col+'18';};
+    img.style.display='block'; ini.style.display='none';
+    img.src=imageUrl;
+  } else {
+    img.style.display='none'; ini.style.display='flex'; ini.style.background=col+'18';
+  }
+  $('mgr-name').textContent=name||'Manager';
+}
+
+/* ── update Tableau parameter "selkpi" ── */
+function updateParam(ws,val){
+  try{
+    ws.getParametersAsync().then(function(params){
+      var p=params.find(function(x){return x.name==='selkpi';});
+      if(p) p.changeValueAsync(val);
+    });
+  }catch(e){console.warn('param:',e);}
+}
+
+/* ── confirmed working data reader ── */
 async function getData(ws){
   var rows=[],rdr=await ws.getSummaryDataReaderAsync(undefined,{ignoreSelection:true});
   for(var i=0;i<rdr.pageCount;i++){
@@ -419,7 +556,6 @@ async function getData(ws){
   await rdr.releaseAsync();
   return rows;
 }
-
 async function getEnc(ws){
   var spec=await ws.getVisualSpecificationAsync(),map={};
   if(spec.activeMarksSpecificationIndex<0) return map;
@@ -428,20 +564,9 @@ async function getEnc(ws){
   return map;
 }
 
-/* ── update Tableau parameter "selkpi" ── */
-function updateParam(ws,categoryValue){
-  try{
-    ws.getParametersAsync().then(function(params){
-      var p=params.find(function(x){return x.name==='selkpi';});
-      if(p) p.changeValueAsync(categoryValue);
-    });
-  }catch(e){console.warn('param update failed:',e);}
-}
-
 /* ── render ── */
 function render(data,enc,ws){
   if(!data.length) return;
-
   var row0=data[0];
 
   function dvStr(row,id){
@@ -457,34 +582,26 @@ function render(data,enc,ws){
     return isNaN(n)?null:n;
   }
 
-  /* ── manager name + image from Detail/Tooltip fields not in encodings ── */
+  /* ── manager name + image URL from Detail fields ──
+     Priority: look for field named "Name" first, then any non-URL string  */
   var usedKeys=[];
   Object.keys(enc).forEach(function(k){if(enc[k])usedKeys.push(enc[k].name);});
-  var managerName=null,imageUrl=null;
+
+  var managerName=null, imageUrl=null;
   Object.keys(row0).forEach(function(k){
     if(usedKeys.indexOf(k)>=0) return;
-    var dv=row0[k];if(!dv) return;
+    var dv=row0[k]; if(!dv) return;
     var f=(dv.formattedValue||'').trim();
     if(!f||f==='%null%'||f==='Null') return;
-    if(!imageUrl&&/^https?:\/\//i.test(f)) imageUrl=f;
-    else if(!managerName&&!/^\d+$/.test(f)&&f.length>2&&f.length<60) managerName=f;
+    /* image URL */
+    if(!imageUrl&&/^https?:\/\//i.test(f)){imageUrl=f; return;}
+    /* "Name" field explicitly */
+    if(!managerName&&k.toLowerCase().indexOf('name')>=0&&f.length>1&&f.length<80){managerName=f; return;}
+    /* fallback: any short non-numeric string */
+    if(!managerName&&!/^\d+$/.test(f)&&f.length>2&&f.length<80) managerName=f;
   });
 
-  /* set photo */
-  var img=$('av-img'),iniEl=$('av-ini');
-  var initials=ini(managerName||'M');
-  var col=nameCol(managerName||'');
-  iniEl.textContent=initials; iniEl.style.color=col;
-
-  if(imageUrl){
-    img.onload=function(){img.style.display='block';iniEl.style.display='none';};
-    img.onerror=function(){img.style.display='none';iniEl.style.display='flex';iniEl.style.background=col+'18';};
-    img.style.display='block'; iniEl.style.display='none';
-    img.src=imageUrl;
-  } else {
-    img.style.display='none'; iniEl.style.display='flex'; iniEl.style.background=col+'18';
-  }
-  $('mgr-name').textContent=managerName||'Manager';
+  setManager(managerName||'Manager',imageUrl);
 
   /* ── KPI cards ── */
   var cards=[null,null,null,null];
@@ -504,27 +621,24 @@ function render(data,enc,ws){
 
   window._achieved=achieved;
   updateRing(achieved);
-  applyScale();
+  applyScale(achieved);
 }
 
-/* ── click on card → update parameter ── */
-function wireCardClicks(ws){
-  for(var i=0;i<4;i++){
-    (function(idx){
-      var el=$('gc'+idx);
-      if(!el) return;
-      el.addEventListener('click',function(){
-        var lbl=el.querySelector('.gc-lbl');
-        if(lbl) updateParam(ws,lbl.textContent);
-        /* visual feedback */
-        el.style.transform='scale(0.97)';
-        setTimeout(function(){el.style.transform='';},150);
-      });
-    })(i);
-  }
+/* ── card click → update parameter ── */
+function wireClicks(ws){
+  [0,1,2,3].forEach(function(i){
+    var el=$('gc'+i);
+    if(!el) return;
+    el.addEventListener('click',function(){
+      var lbl=el.querySelector('.gc-lbl');
+      if(lbl) updateParam(ws,lbl.textContent);
+      el.style.transform='translateY(-5px) scale(0.97)';
+      setTimeout(function(){el.style.transform='';},160);
+    });
+  });
 }
 
-/* ── splash → main transition ── */
+/* ── splash → main ── */
 function showMain(){
   var splash=$('splash');
   splash.style.opacity='0';
@@ -532,14 +646,14 @@ function showMain(){
     splash.style.display='none';
     var main=$('main');
     main.style.display='flex';
-    applyScale();
+    applyScale(window._achieved||[true,true,true,true]);
   },500);
 }
 
-/* ── confirmed working init pattern ── */
+/* ── init ── */
 window.onload=tableau.extensions.initializeAsync().then(function(){
   var ws=tableau.extensions.worksheetContent.worksheet;
-  wireCardClicks(ws);
+  wireClicks(ws);
 
   var dataReady=false, timerDone=false;
 
@@ -557,9 +671,7 @@ window.onload=tableau.extensions.initializeAsync().then(function(){
   };
 
   ws.addEventListener(tableau.TableauEventType.SummaryDataChanged,function(){
-    getData(ws).then(function(data){
-      getEnc(ws).then(function(enc){render(data,enc,ws);});
-    });
+    getData(ws).then(function(d){getEnc(ws).then(function(e){render(d,e,ws);});});
   });
   update();
 });
