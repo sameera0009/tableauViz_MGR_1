@@ -95,7 +95,7 @@ html,body{
   position:relative;z-index:8;
   /* push photo UP so its centre lines up with card tops */
   margin-bottom:0;
-  transform:translateY(-38%);
+  transform:translateY(-50%);  /* photo centre at card top level */
 }
 
 .av-outer{
@@ -147,7 +147,7 @@ html,body{
   backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   border:1px solid rgba(255,255,255,.65);
   border-radius:28px;
-  padding:18px 16px 44px;     /* extra bottom padding for kpi badge */
+  padding:18px 16px 16px;
   box-shadow:0 8px 20px -6px rgba(0,0,0,.08),0 0 0 .5px rgba(255,255,245,.9) inset;
   position:relative;cursor:pointer;
   transition:all .25s cubic-bezier(.2,.9,.4,1.1);
@@ -219,12 +219,22 @@ html,body{
 .gc-att{font-size:10px;font-weight:600;margin-top:6px;text-align:right;letter-spacing:-.2px;}
 .gc.ok  .gc-att{color:#0b5e42;}
 .gc.miss .gc-att{color:#b91c1c;}
-
-.kpi-badge{
-  position:absolute;bottom:12px;left:16px;
-  font-size:8px;font-weight:600;text-transform:uppercase;
-  background:rgba(0,0,0,.04);padding:2px 8px;border-radius:20px;color:#4a5a7a;
+.gc.selected{
+  transform:scale(1.06) translateY(-6px);
+  background:rgba(255,255,255,.96);
+  box-shadow:0 28px 48px -10px rgba(0,0,0,.22),0 0 0 2px rgba(16,185,129,.4);
+  border-color:rgba(16,185,129,.5);
+  z-index:10;
 }
+.gc.selected.miss{
+  box-shadow:0 28px 48px -10px rgba(0,0,0,.22),0 0 0 2px rgba(239,68,68,.4);
+  border-color:rgba(239,68,68,.5);
+}
+.gc.selected::before{
+  height:5px;
+}
+
+
 
 @media(max-width:860px){
   .dash-grid{gap:12px;}
@@ -272,7 +282,7 @@ html,body{
       <div class="gc-vs" id="gc0-vs"></div>
       <div class="gc-bar"><div class="gc-fill" id="gc0-bar"></div></div>
       <div class="gc-att" id="gc0-att"></div>
-      <div class="kpi-badge">KPI 01</div>
+
     </div>
 
     <!-- KPI 1 : Advances (left 2) -->
@@ -291,7 +301,7 @@ html,body{
       <div class="gc-vs" id="gc1-vs"></div>
       <div class="gc-bar"><div class="gc-fill" id="gc1-bar"></div></div>
       <div class="gc-att" id="gc1-att"></div>
-      <div class="kpi-badge">KPI 02</div>
+
     </div>
 
     <!-- PHOTO CENTRE -->
@@ -321,7 +331,7 @@ html,body{
       <div class="gc-vs" id="gc2-vs"></div>
       <div class="gc-bar"><div class="gc-fill" id="gc2-bar"></div></div>
       <div class="gc-att" id="gc2-att"></div>
-      <div class="kpi-badge">KPI 03</div>
+
     </div>
 
     <!-- KPI 3 : NPA % (right 2) -->
@@ -340,7 +350,7 @@ html,body{
       <div class="gc-vs" id="gc3-vs"></div>
       <div class="gc-bar"><div class="gc-fill" id="gc3-bar"></div></div>
       <div class="gc-att" id="gc3-att"></div>
-      <div class="kpi-badge">KPI 04</div>
+
     </div>
 
   </div>
@@ -428,21 +438,15 @@ function drawConnectors(achieved){
     var isLeft=i<2;
     var col=colors[i];
 
-    /* path: card-top-centre → up to pY → across to pX
-       This creates the T-bar shape seen in the reference image:
-       vertical from card top → horizontal at photo level → photo centre */
-    var pathD;
-    if(isLeft){
-      /* left cards: go up then right to photo */
-      pathD='M '+cX+' '+cY_top+' L '+cX+' '+pY+' L '+pX+' '+pY;
-    } else {
-      /* right cards: go up then left to photo */
-      pathD='M '+cX+' '+cY_top+' L '+cX+' '+pY+' L '+pX+' '+pY;
-    }
+    /* Elbow path: card top-centre → horizontal to photo x → photo centre dot
+       Matches reference image: line from top centre of each card to photo */
+    /* midpoint y for the elbow */
+    var elbowY = pY + (cY_top - pY) * 0.5;
+    var pathD = 'M '+pX+' '+pY+' L '+pX+' '+elbowY+' L '+cX+' '+elbowY+' L '+cX+' '+cY_top;
     addPath(pathD,col);
 
-    /* small open circle at card top */
-    addCircle(cX,cY_top,4,'#f0f4f8',1.8,col);
+    /* open circle at card top */
+    addCircle(cX, cY_top, 4, 'rgba(240,244,248,0.9)', 1.8, col);
   });
 
   /* central filled dot at photo */
@@ -452,7 +456,8 @@ function drawConnectors(achieved){
 /* ── resize + connectors ── */
 function applyScale(achieved){
   var w=window.innerWidth;
-  var sz=Math.min(96,Math.max(62,Math.round(w*0.09)));
+  /* avatar diameter = roughly half card height */
+  var sz=Math.min(86,Math.max(52,Math.round(w*0.075)));
   var outer=$('av-outer'),inner=$('av-inner');
   if(outer){outer.style.width=(sz+10)+'px';outer.style.height=(sz+10)+'px';}
   if(inner){inner.style.width=sz+'px';inner.style.height=sz+'px';}
@@ -485,7 +490,7 @@ function setCard(idx,label,actual,previous,budget){
     var up=isNPA?delta<=0:delta>=0;
     dEl.className='gc-delta '+(up?'up':'dn');
     dEl.textContent=(up?'▲ ':'▼ ')+(pct>=0?'+':'')+pct.toFixed(1)+'%';
-    vsEl.textContent='vs previous period';
+    vsEl.textContent='vs last month';
   } else {
     dEl.className='gc-delta neu'; dEl.textContent='—'; vsEl.textContent='';
   }
@@ -624,17 +629,40 @@ function render(data,enc,ws){
   applyScale(achieved);
 }
 
-/* ── card click → update parameter ── */
+/* ── card click → select + update parameter ── */
+var selectedIdx=-1;
+function selectCard(idx,ws){
+  [0,1,2,3].forEach(function(i){
+    var el=$('gc'+i);
+    if(!el) return;
+    /* preserve ok/miss class */
+    var base=el.className.replace(' selected','').trim();
+    el.className = i===idx ? base+' selected' : base;
+  });
+  selectedIdx=idx;
+  if(idx>=0){
+    var lbl=$('gc'+idx).querySelector('.gc-lbl');
+    if(lbl) updateParam(ws,lbl.textContent);
+  }
+}
+
 function wireClicks(ws){
   [0,1,2,3].forEach(function(i){
     var el=$('gc'+i);
     if(!el) return;
-    el.addEventListener('click',function(){
-      var lbl=el.querySelector('.gc-lbl');
-      if(lbl) updateParam(ws,lbl.textContent);
-      el.style.transform='translateY(-5px) scale(0.97)';
-      setTimeout(function(){el.style.transform='';},160);
+    el.addEventListener('click',function(e){
+      e.stopPropagation();
+      if(selectedIdx===i){
+        /* clicking selected card → deselect */
+        selectCard(-1,ws);
+      } else {
+        selectCard(i,ws);
+      }
     });
+  });
+  /* click anywhere else → deselect */
+  document.addEventListener('click',function(){
+    if(selectedIdx>=0) selectCard(-1,ws);
   });
 }
 
